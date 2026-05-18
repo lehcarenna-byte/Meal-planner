@@ -13,8 +13,10 @@ async function callClaude(messages, system) {
     }),
   });
   const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error?.message || data.error || `API error ${res.status}`);
+  }
   const text = data.content?.find(b => b.type === "text")?.text || "";
-  // strip markdown fences
   return text.replace(/```json|```/g, "").trim();
 }
 
@@ -359,7 +361,7 @@ export default function MealPlannerApp() {
       setActiveTab("meals");
     } catch (e) {
       clearInterval(interval);
-      setError("Something went wrong generating the plan. Please try again.");
+      setError(e.message || "Something went wrong generating the plan. Please try again.");
       setScreen("home");
     }
   }, [anchors, anchorRecipe, budget, servings]);
