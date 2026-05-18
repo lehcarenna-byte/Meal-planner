@@ -7,7 +7,7 @@ async function callClaude(messages, system) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 4096,
+      max_tokens: 8096,
       system,
       messages,
     }),
@@ -37,7 +37,7 @@ When asked to generate a full week, return exactly this shape:
       "cookTime": "25 min",
       "description": "One-sentence description.",
       "ingredients": ["item 1", "item 2"],
-      "instructions": ["Step 1.", "Step 2.", "Step 3.", "Step 4.", "Step 5."]
+      "instructions": ["Step 1.", "Step 2.", "Step 3."]
     }
   ],
   "groceryList": [
@@ -53,6 +53,7 @@ When asked to generate a full week, return exactly this shape:
 
 Rules:
 - 7 meals (Mon–Sun), last meal uses leftovers from a prior batch
+- Keep ingredients list to 6 items max per meal, instructions to 4 steps max — be concise
 - Budget ~$50–55 total shop for 3 people
 - Prioritize affordable staples: rice, beans, lentils, pasta, potatoes, carrots, seasonal CA produce
 - Reuse ingredients across multiple meals to reduce waste
