@@ -48,7 +48,13 @@ When asked to generate a full week, return exactly this shape:
       "items": [{ "name": "Ground beef (80/20)", "qty": "1 lb", "est": "$4.99" }]
     }
   ],
-  "weekTotal": 52.00
+  "weekTotal": 52.00,
+  "tips": [
+    { "icon": "🍗", "title": "Short tip title", "body": "2–3 sentence practical tip about ingredient savings, batch strategy, or substitutions." }
+  ],
+  "prepSchedule": [
+    { "when": "Sunday or Monday", "task": "What to prep and why it saves time later in the week." }
+  ]
 }
 
 Rules:
@@ -63,6 +69,8 @@ Rules:
 - tagColor must match: Batch Cook=#e8a838, 15 min cook=#4caf7d, One Pan=#6c88d4, Oven Meal=#b06dd4, Budget MVP=#e85c5c, High Protein=#e85c5c, No Waste=#4caf7d
 - Grocery categories: "Proteins & Meat", "Fresh Produce", "Grains & Bread", "Canned & Pantry", "Frozen Veg", "Oils, Sauces & Spices", "Optional"
 - cost field = estimated ingredient cost for that meal only (not full groceries)
+- tips: 4–6 entries — focus on key ingredient savings, batch cooking strategy, ingredient reuse across meals, and substitution ideas. Each body is 2–3 sentences max.
+- prepSchedule: 4–5 entries covering the whole week, each explaining what to do and why it saves effort later
 
 When asked to regenerate ONE meal, return ONLY the single meal object (same shape as above, no wrapper).`;
 
@@ -308,6 +316,58 @@ function GroceryList({ groceryList, weekTotal }) {
   );
 }
 
+// ── Tips tab ───────────────────────────────────────────────────────────────
+function TipsTab({ tips, prepSchedule }) {
+  return (
+    <div>
+      <div style={{ display: "grid", gap: 12, marginBottom: 24 }}>
+        {tips.map((tip, i) => (
+          <div key={i} style={{
+            background: "#fff",
+            border: "1px solid #e8e0d8",
+            borderRadius: 14,
+            padding: "18px 20px",
+            display: "flex",
+            gap: 16,
+            alignItems: "flex-start",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+          }}>
+            <div style={{ fontSize: 26, flexShrink: 0, lineHeight: 1 }}>{tip.icon}</div>
+            <div>
+              <div style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: 15, fontWeight: 600, color: "#1c1917", marginBottom: 5 }}>{tip.title}</div>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#5a4a3a", lineHeight: 1.6 }}>{tip.body}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {prepSchedule.length > 0 && (
+        <div style={{ background: "#fff", border: "1px solid #e8e0d8", borderRadius: 14, padding: "20px 22px" }}>
+          <div style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: 16, fontWeight: 600, color: "#1c1917", marginBottom: 16 }}>
+            Suggested Prep Schedule
+          </div>
+          <div style={{ display: "grid", gap: 12 }}>
+            {prepSchedule.map((s, i) => (
+              <div key={i} style={{ display: "flex", gap: 14 }}>
+                <div style={{
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#c97d30",
+                  minWidth: 130,
+                  flexShrink: 0,
+                  paddingTop: 1,
+                }}>{s.when}</div>
+                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: "#4a3a2a", lineHeight: 1.5 }}>{s.task}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main App ───────────────────────────────────────────────────────────────
 export default function MealPlannerApp() {
   const [screen, setScreen] = useState("home"); // home | loading | plan
@@ -323,6 +383,8 @@ export default function MealPlannerApp() {
   const [regenLoading, setRegenLoading] = useState(null);
   const [loadingMsg, setLoadingMsg] = useState("");
   const [error, setError] = useState("");
+  const [tips, setTips] = useState([]);
+  const [prepSchedule, setPrepSchedule] = useState([]);
 
   const LOADING_MSGS = [
     "Checking what's in season in California…",
@@ -357,6 +419,8 @@ export default function MealPlannerApp() {
       setMeals(parsed.meals || []);
       setGroceryList(parsed.groceryList || []);
       setWeekTotal(parsed.weekTotal || null);
+      setTips(parsed.tips || []);
+      setPrepSchedule(parsed.prepSchedule || []);
       setScreen("plan");
       setExpanded(null);
       setActiveTab("meals");
@@ -684,7 +748,7 @@ export default function MealPlannerApp() {
 
           {/* Tabs */}
           <div style={{ display: "flex", gap: 0 }}>
-            {[["meals","🍽 Meals"],["groceries","🛒 Grocery List"]].map(([id, label]) => (
+            {[["meals","🍽 Meals"],["groceries","🛒 Grocery List"],["tips","💡 Tips"]].map(([id, label]) => (
               <button
                 key={id}
                 className="tab-btn"
@@ -727,6 +791,12 @@ export default function MealPlannerApp() {
         {activeTab === "groceries" && (
           <div className="fade-in">
             <GroceryList groceryList={groceryList} weekTotal={weekTotal} />
+          </div>
+        )}
+
+        {activeTab === "tips" && (
+          <div className="fade-in">
+            <TipsTab tips={tips} prepSchedule={prepSchedule} />
           </div>
         )}
       </div>
