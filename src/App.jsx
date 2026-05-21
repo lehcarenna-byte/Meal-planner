@@ -2,20 +2,35 @@ import { useState, useCallback, useEffect } from "react";
 
 // ── Anthropic API call ─────────────────────────────────────────────────────
 async function callClaude(messages, system) {
-  const res = await fetch("/api/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 8096,
-      system,
-      messages,
-    }),
-  });
-  const data = await res.json();
+  let res;
+  try {
+    res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 8096, system, messages }),
+    });
+  } catch (e) {
+    throw new Error(`Network error: ${e.message}`);
+  }
+
+  let raw;
+  try {
+    raw = await res.text();
+  } catch (e) {
+    throw new Error(`Could not read response: ${e.message}`);
+  }
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    throw new Error(`Response was not JSON (status ${res.status}): ${raw.slice(0, 120)}`);
+  }
+
   if (!res.ok || data.error) {
     throw new Error(data.error?.message || data.error || `API error ${res.status}`);
   }
+
   const text = data.content?.find(b => b.type === "text")?.text || "";
   return text.replace(/```json|```/g, "").trim();
 }
