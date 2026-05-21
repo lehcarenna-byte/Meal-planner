@@ -13,26 +13,48 @@ async function callClaude(messages, system) {
     throw new Error(`Network error: ${e.message}`);
   }
 
-  let raw;
+  // Non-200 means a JSON error from our proxy (not a stream)
+  if (!res.ok) {
+    const errText = await res.text();
+    let errData;
+    try { errData = JSON.parse(errText); } catch {}
+    throw new Error(errData?.error || `API error ${res.status}: ${errText.slice(0, 120)}`);
+  }
+
+  // Read the SSE stream and accumulate text_delta events
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = "";
+  let buffer = "";
+
   try {
-    raw = await res.text();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (!payload || payload === "[DONE]") continue;
+        try {
+          const evt = JSON.parse(payload);
+          if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
+            fullText += evt.delta.text;
+          }
+          if (evt.type === "error") throw new Error(evt.error?.message || "Stream error");
+        } catch (e) {
+          if (e.message.includes("Stream error")) throw e;
+        }
+      }
+    }
   } catch (e) {
-    throw new Error(`Could not read response: ${e.message}`);
+    throw new Error(`Stream error: ${e.message}`);
   }
 
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch (e) {
-    throw new Error(`Response was not JSON (status ${res.status}): ${raw.slice(0, 120)}`);
-  }
-
-  if (!res.ok || data.error) {
-    throw new Error(data.error?.message || data.error || `API error ${res.status}`);
-  }
-
-  const text = data.content?.find(b => b.type === "text")?.text || "";
-  return text.replace(/```json|```/g, "").trim();
+  if (!fullText) throw new Error("Empty response — the API returned no content");
+  return fullText.replace(/```json|```/g, "").trim();
 }
 
 // ── System prompt ──────────────────────────────────────────────────────────
